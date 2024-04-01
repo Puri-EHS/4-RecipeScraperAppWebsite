@@ -1,80 +1,104 @@
 import pygame
-import pygame_gui
 
+# Initialize Pygame
 pygame.init()
 
-window_size = (800, 600)
-window = pygame.display.set_mode(window_size)
-pygame.display.set_caption('Pygame UI')
+# Set up the screen
+screen_width, screen_height = 800, 800
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Recipe Creator")
 
-ui_manager = pygame_gui.UIManager(window_size)
-
-
+# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+GRAY = (200, 200, 200)
 
-button_width = 200
-button_height = 50
-button_x = (window_size[0] - button_width) // 2
-button_y = 100
-button_gap = 20
+# Fonts
+font_large = pygame.font.Font(None, 36)
+font_medium = pygame.font.Font(None, 24)
 
+# Ingredients list
+ingredients = []
 
-button_recipe_creator = pygame_gui.elements.UIButton(
-    relative_rect=pygame.Rect((button_x, button_y), (button_width, button_height)),
-    text='Recipe Creator',
-    manager=ui_manager
-)
+# Pages
+HOME_PAGE = 0
+FILTER_SEARCH_PAGE = 1
+current_page = HOME_PAGE
 
-button_filter_search = pygame_gui.elements.UIButton(
-    relative_rect=pygame.Rect((button_x, button_y + button_height + button_gap), (button_width // 2 - button_gap // 2, button_height)),
-    text='Filter Search',
-    manager=ui_manager
-)
+# Button dimensions
+button_width, button_height = 200, 50
 
-button_recipe_search = pygame_gui.elements.UIButton(
-    relative_rect=pygame.Rect((button_x + button_width // 2 + button_gap // 2, button_y + button_height + button_gap), (button_width // 2 - button_gap // 2, button_height)),
-    text='Recipe Search',
-    manager=ui_manager
-)
+# Function to draw text on screen
+def draw_text(text, font, color, x, y):
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect()
+    text_rect.center = (x, y)
+    screen.blit(text_surface, text_rect)
 
-# Input fields for search buttons
-##input_field_filter_search = pygame_gui.elements.UITextEntryLine(
-    ##relative_rect=pygame.Rect((button_x, button_y + 2 * (button_height + button_gap)), (button_width // 2 - button_gap // 2, button_height)),
-    ##manager=ui_manager
-)
+# Function to draw buttons
+def draw_button(text, x, y, width, height, inactive_color, active_color, action=None):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
 
-##input_field_recipe_search = pygame_gui.elements.UITextEntryLine(
-  ##  relative_rect=pygame.Rect((button_x + button_width // 2 + button_gap // 2, button_y + 2 * (button_height + button_gap)), (button_width // 2 - button_gap // 2, button_height)),
-    ##manager=ui_manager
-)
+    if x < mouse[0] < x + width and y < mouse[1] < y + height:
+        pygame.draw.rect(screen, active_color, (x, y, width, height))
+        if click[0] == 1 and action is not None:
+            action()
+    else:
+        pygame.draw.rect(screen, inactive_color, (x, y, width, height))
 
-# Main loop
-is_running = True
-clock = pygame.time.Clock()
+    draw_text(text, font_medium, BLACK, x + width / 2, y + height / 2)
 
-while is_running:
-    time_delta = clock.tick(60) / 1000.0
+# Function to handle button actions
+def filter_search_action():
+    global current_page
+    current_page = FILTER_SEARCH_PAGE
+
+def back_to_home_action():
+    global current_page
+    current_page = HOME_PAGE
+
+def add_ingredient_action():
+    ingredient = filter_search_page_elements[1].get_text()
+    if ingredient:
+        ingredients.append(ingredient)
+        filter_search_page_elements[1].set_text("")
+
+def delete_ingredient_action(index):
+    del ingredients[index]
+
+# Main Loop
+running = True
+while running:
+    screen.fill(WHITE)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            is_running = False
+            running = False
 
-        if event.type == pygame.USEREVENT:
-            if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                if event.ui_element == button_filter_search:
-                    #input_field_filter_search.show()
-                elif event.ui_element == button_recipe_search:
-                    input_field_recipe_search.show()
-#
-        ui_manager.process_events(event)
+    if current_page == HOME_PAGE:
+        draw_text("Recipe Creator", font_large, BLACK, screen_width / 2, 100)
+        draw_button("Filter Search", 300, 200, button_width, button_height, GRAY, BLACK, filter_search_action)
+        draw_button("Recipe Search", 300, 300, button_width, button_height, GRAY, BLACK)
 
-    ui_manager.update(time_delta)
+    elif current_page == FILTER_SEARCH_PAGE:
+        draw_button("Back", 20, 20, button_width, button_height, GRAY, BLACK, back_to_home_action)
+        pygame.draw.rect(screen, GRAY, (150, 20, 300, 30))
+        pygame.draw.rect(screen, GRAY, (470, 20, 100, 30))
+        draw_text("Add", font_medium, BLACK, 520, 35)
+        draw_text("Ingredient:", font_medium, BLACK, 20, 80)
 
-    window.fill(WHITE)
+        ingredient_input = pygame.Rect(150, 50, 300, 30)
+        pygame.draw.rect(screen, BLACK, ingredient_input, 2)
 
-    ui_manager.draw_ui(window)
+        filter_search_page_elements = [
+            pygame.Rect(150, 120 + i * 30, 300, 30) for i, _ in enumerate(ingredients)
+        ]
 
-    pygame.display.update()
+        for i, ingredient in enumerate(ingredients):
+            draw_text(ingredient, font_medium, BLACK, 150, 120 + i * 30)
+            draw_button("Delete", 500, 120 + i * 30, 100, 30, GRAY, BLACK, lambda i=i: delete_ingredient_action(i))
+
+    pygame.display.flip()
 
 pygame.quit()
