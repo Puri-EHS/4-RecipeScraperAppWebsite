@@ -4,7 +4,7 @@ import pygame
 pygame.init()
 
 # Set up the screen
-screen_width, screen_height = 800, 800
+screen_width, screen_height = 800, 600
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Recipe Creator")
 
@@ -59,22 +59,52 @@ def back_to_home_action():
     current_page = HOME_PAGE
 
 def add_ingredient_action():
-    ingredient = filter_search_page_elements[1].get_text()
+    ingredient = ingredient_text
     if ingredient:
         ingredients.append(ingredient)
-        filter_search_page_elements[1].set_text("")
+        reset_search_bar()
 
 def delete_ingredient_action(index):
     del ingredients[index]
 
+def reset_search_bar():
+    global ingredient_text
+    ingredient_text = ""
+
 # Main Loop
 running = True
+ingredient_text = ""
+active_input = False  # To track if the search bar is active
 while running:
     screen.fill(WHITE)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if current_page == FILTER_SEARCH_PAGE:
+                # Check if the search bar is clicked
+                if ingredient_input.collidepoint(event.pos):
+                    active_input = True
+                else:
+                    active_input = False
+                continue  # Continue to prevent closing the window
+            if current_page == FILTER_SEARCH_PAGE:
+                for i, rect in enumerate(filter_search_page_elements):
+                    if rect.collidepoint(event.pos):
+                        if i % 4 == 3:
+                            delete_ingredient_action(i // 4)
+                            break
+                if filter_search_page_elements[0].collidepoint(event.pos):
+                    back_to_home_action()
+        elif event.type == pygame.KEYDOWN:
+            if active_input and current_page == FILTER_SEARCH_PAGE:
+                if event.key == pygame.K_RETURN:
+                    add_ingredient_action()
+                elif event.key == pygame.K_BACKSPACE:
+                    ingredient_text = ingredient_text[:-1]
+                else:
+                    ingredient_text += event.unicode
 
     if current_page == HOME_PAGE:
         draw_text("Recipe Creator", font_large, BLACK, screen_width / 2, 100)
@@ -92,12 +122,19 @@ while running:
         pygame.draw.rect(screen, BLACK, ingredient_input, 2)
 
         filter_search_page_elements = [
-            pygame.Rect(150, 120 + i * 30, 300, 30) for i, _ in enumerate(ingredients)
+            pygame.Rect(150, 120 + i * 40, 300, 30) for i, _ in enumerate(ingredients)
         ]
 
         for i, ingredient in enumerate(ingredients):
-            draw_text(ingredient, font_medium, BLACK, 150, 120 + i * 30)
-            draw_button("Delete", 500, 120 + i * 30, 100, 30, GRAY, BLACK, lambda i=i: delete_ingredient_action(i))
+            draw_text(ingredient, font_medium, BLACK, 150, 120 + i * 40)
+            draw_button("Delete", 500, 120 + i * 40, 100, 30, GRAY, BLACK)
+
+        # Changes related to the search bar
+        pygame.draw.rect(screen, WHITE, ingredient_input)
+        draw_text(ingredient_text, font_medium, BLACK, ingredient_input.x + 5, ingredient_input.y + 5)
+
+        if active_input:
+            pygame.draw.rect(screen, BLACK, ingredient_input, 2)
 
     pygame.display.flip()
 
